@@ -15,18 +15,54 @@ public abstract class RenderableAdapter extends BaseAdapter {
         void view(int index, T item);
     }
 
+    public interface SpinnerItem<T> extends Item<T> {
+        void dropDownView(int index, T item);
+    }
+
     public static <T> RenderableAdapter withItems(final List<T> items, final Item<T> r) {
         return new RenderableAdapter() {
             public int getCount() {
                 return items.size();
             }
+
             public T getItem(int pos) {
                 return items.get(pos);
             }
+
             public void view(int pos) {
                 r.view(pos, getItem(pos));
             }
+
+            public void dropDownView(int pos) {
+                if (r instanceof SpinnerItem) {
+                    ((SpinnerItem) r).dropDownView(pos, getItem(pos));
+                } else {
+                    r.view(pos, getItem(pos));
+                }
+            }
         };
+    }
+
+    @Override
+    public View getDropDownView(int pos, View convertView, ViewGroup parent) {
+        View v = convertView;
+        if (v == null) {
+            currentPosition = pos;
+            FrameLayout vg = new FrameLayout(parent.getContext());
+            Anvil.Mount m = new Anvil.Mount(vg, new Anvil.Renderable() {
+                public void view() {
+                    RenderableAdapter.this.dropDownView(currentPosition);
+                }
+            });
+            Anvil.render(m);
+            vg.setTag(m);
+            v = vg;
+        } else {
+            Anvil.Mount m = (Anvil.Mount) v.getTag();
+            currentPosition = pos;
+            Anvil.render(m);
+        }
+        return v;
     }
 
     @Override
@@ -57,4 +93,7 @@ public abstract class RenderableAdapter extends BaseAdapter {
     }
 
     public abstract void view(int index);
+
+    public abstract void dropDownView(int index);
+
 }
